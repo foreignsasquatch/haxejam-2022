@@ -23,9 +23,9 @@ class Menu extends Process {
 
     override function drawUI() {
         if(ui.button("play", 10, 10, 200, 100)) Process.set(Game);
-        ui.button("test", 10, 120, 200, 100);
     }
 
     override function unload() {
+        Rl.unloadFont(ui.font);
     }
 }

@@ -2,3 +2,4 @@
 -m Main
 
 -lib raylib-hx
+-lib ase

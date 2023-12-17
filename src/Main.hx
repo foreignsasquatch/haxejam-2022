@@ -6,6 +6,6 @@ function main() {
     window.width = 1280;
     window.height = 720;
     window.title = "Haxejam 2022 - Summer";
-    window.resolution = {w: 640, h: 360};
+    window.resolution = {w: 320, h: 180};
     window.run(Menu);
 }
