@@ -1,0 +1,5 @@
+base.hxml
+
+-cpp bin/cpp
+-D HXCPP-DEBUGGER
+-D HXCPP-STACK-TRACE
