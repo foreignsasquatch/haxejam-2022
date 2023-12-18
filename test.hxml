@@ -1,0 +1,17 @@
+--class-path src
+--class-path test
+
+# --class-path test/controller_trace
+--class-path test/vehicle
+--main RunTest
+
+-lib raylib-hx
+-lib ase
+
+-cpp bin/cpp/test
+
+-D HXCPP-DEBUGGER
+-D HXCPP-STACK-TRACE
+-D no-deprecation-warnings
+
+--cmd ./bin/cpp/test/RunTest
