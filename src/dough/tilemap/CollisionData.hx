@@ -3,7 +3,6 @@ package dough.tilemap;
 class CollisionData {
     public var width:Int;
     public var height:Int;
-    public var gridSize:Int = 16;
     public var data:Array<Int> = [];
     
     public function new(w:Int, h:Int, d:Array<Int>) {
@@ -13,6 +12,20 @@ class CollisionData {
     }
 
     public function exists(cx:Int, cy:Int):Bool {
-        return data[width * cx + cy] == 1;
+        return data[index(cx, cy)] == 1;
+    }
+
+    public inline function index(column, row):Int{
+        return width * row + column;
+    }
+
+    public inline function column(index:Int):Int
+    {
+        return Std.int(index % width);
+    }
+
+    public inline function row(index:Int):Int
+    {
+        return Std.int(index / width);
     }
 }
