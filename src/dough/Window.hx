@@ -5,17 +5,24 @@ class Window {
     public var height:Int = 720;
     public var resolution:{w:Int, h:Int} = {w: 1280, h: 720};
     public var title:String = "WINDOW";
-    
+    public var camera:Rl.Camera2D;
+
     public var pause:Bool = false;
 
     private static var renderTexture:Rl.RenderTexture;
     private static var sourceRec:Rl.Rectangle;
     private static var destRec:Rl.Rectangle;
 
-    private static var timeStep = 1 / 60; // Fixed update at 60 fps
-    private static var timeCounter = 0.0;
+    var updatesPerSecond:Int;
 
-    public function new() {} // just to create the object
+    static var timeStep:Float;
+    static var timeCounter = 0.0;
+
+    public function new(updatesPerSecond:Int=60) {
+        this.updatesPerSecond = updatesPerSecond;
+        timeStep = 1 / updatesPerSecond;
+        camera = Rl.Camera2D.create(Rl.Vector2.create(0, 0), Rl.Vector2.create(0, 0));
+    }
 
     public function run(process:Class<Process>) {
         Rl.setConfigFlags(Rl.ConfigFlags.VSYNC_HINT);
@@ -29,7 +36,7 @@ class Window {
         sourceRec = Rl.Rectangle.create(0, 0, resolution.w, -resolution.h);
         destRec = Rl.Rectangle.create(-ratio, -ratio, width + (ratio * 2), height + (ratio * 2));
 
-        Process.current = Type.createInstance(process, []); 
+        Process.current = Type.createInstance(process, [this]); 
         Process.current.create(); // create scene here <--
 
         #if emscripten
@@ -48,8 +55,9 @@ class Window {
         Rl.closeWindow();
     }
 
-    private static function update() {
+    private function update() {
         timeCounter += Rl.getFrameTime();
+        
         while(timeCounter > timeStep) {
             Process.current.update(); // update here
             timeCounter -= timeStep;
@@ -57,8 +65,11 @@ class Window {
 
         Rl.beginTextureMode(renderTexture);
         Rl.clearBackground(Rl.Colors.BLACK);
-        
+		
+        Rl.beginMode2D(camera);        
         Process.current.draw();
+        Rl.endMode2D();
+
         Rl.endTextureMode();
 
         Rl.beginDrawing();
@@ -67,5 +78,9 @@ class Window {
         Rl.drawTexturePro(renderTexture.texture, sourceRec, destRec, Rl.Vector2.zero(), 0, Rl.Colors.WHITE);
         Process.current.drawUI();
         Rl.endDrawing();
+    }
+
+    public function toFrameCount(seconds:Float):Float{
+        return seconds / timeStep;
     }
 }

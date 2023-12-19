@@ -2,8 +2,12 @@ package dough;
 
 class Process {
     public static var current:Process;
+	var window:Window;
 
-    public function new() {}
+    public function new(window:Window){
+        this.window = window;
+    }
+
     public function create() {}
     public function update() {}
     public function draw() {}
