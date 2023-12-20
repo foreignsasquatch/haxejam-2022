@@ -5,7 +5,6 @@ import Controller;
 
 class Test extends Process {
 	var car:Vehicle;
-	var steeringController:SteeringController;
 	var controller:KeyboardController;
 	var font:Font;
 	var levelTiles:Array<Rectangle> = [];
@@ -80,20 +79,21 @@ class Test extends Process {
 		});
 
 		car.setCoords(100, 100, gridSize);
+		
+		var steeringButtons:ButtonPair = {
+			onPressA: () -> car.changeRotationDirection(-1),
+			onReleaseA: () -> car.changeRotationDirection(0),
 
-		steeringController = {
-			onPressLeft: () -> car.changeRotationDirection(-1),
-			onPressRight: () -> car.changeRotationDirection(1),
-			onReleaseLeft: () -> car.changeRotationDirection(0),
-			onReleaseRight: () -> car.changeRotationDirection(0),
+			onPressB: () -> car.changeRotationDirection(1),
+			onReleaseB: () -> car.changeRotationDirection(0),
 		}
-
+		
 		controller = new KeyboardController({
-			leftPress: () -> steeringController.controlLeft(true),
-			leftRelease: () -> steeringController.controlLeft(false),
+			leftPress: () -> steeringButtons.controlA(true),
+			leftRelease: () -> steeringButtons.controlA(false),
 
-			rightPress: () -> steeringController.controlRight(true),
-			rightRelease: () -> steeringController.controlRight(false),
+			rightPress: () -> steeringButtons.controlB(true),
+			rightRelease: () -> steeringButtons.controlB(false),
 
 			aPress: () -> car.pressAccelerate(),
 			aRelease: () -> car.releaseAccelerate(),
@@ -394,38 +394,39 @@ class VehicleConfig {
 }
 
 @:structInit
-class SteeringController {
-	var onPressLeft:() -> Void = () -> return;
-	var onPressRight:() -> Void = () -> return;
-	var onReleaseLeft:() -> Void = () -> return;
-	var onReleaseRight:() -> Void = () -> return;
-	var isPressedLeft:Bool = false;
-	var isPressedRight:Bool = false;
+class ButtonPair {
+	var onPressA:() -> Void = () -> return;
+	var onReleaseA:() -> Void = () -> return;
+	var isPressedA:Bool = false;
 
-	public function controlLeft(isButtonPressed:Bool) {
+	var onPressB:() -> Void = () -> return;
+	var onReleaseB:() -> Void = () -> return;
+	var isPressedB:Bool = false;
+	
+	public function controlA(isButtonPressed:Bool) {
 		if (isButtonPressed) {
-			isPressedLeft = true;
-			onPressLeft();
+			isPressedA = true;
+			onPressA();
 		} else {
-			isPressedLeft = false;
-			if (isPressedRight) {
-				onPressRight();
+			isPressedA = false;
+			if (isPressedB) {
+				onPressB();
 			} else {
-				onReleaseLeft();
+				onReleaseA();
 			}
 		}
 	}
 
-	public function controlRight(isButtonPressed:Bool) {
+	public function controlB(isButtonPressed:Bool) {
 		if (isButtonPressed) {
-			isPressedRight = true;
-			onPressRight();
+			isPressedB = true;
+			onPressB();
 		} else {
-			isPressedRight = false;
-			if (isPressedLeft) {
-				onPressLeft();
+			isPressedB = false;
+			if (isPressedA) {
+				onPressA();
 			} else {
-				onReleaseRight();
+				onReleaseB();
 			}
 		}
 	}
