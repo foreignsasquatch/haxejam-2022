@@ -44,25 +44,25 @@ class Test extends Process {
 		}
 
 		car = new Vehicle({
-			forwardSpeed: 7.5,
+			forwardSpeed: 8.5,
 			rotateSpeed: 3.5,
 			accelerationCurve: {
 				press: {
-					easeFunction: smoothStart2,
-					duration: window.toFrameCount(10.2)
+					easeFunction: t -> smoothStart2(t) + 0.009,
+					duration: window.toFrameCount(22.2)
 				},
 				release: {
-					easeFunction: linear,
-					duration: window.toFrameCount(15.2)
+					easeFunction: smoothStart2,
+					duration: window.toFrameCount(11.2)
 				}
 			},
 			brakeCurve: {
 				press: {
-					easeFunction: smoothStop3,
-					duration: window.toFrameCount(1.1)
+					easeFunction: smoothStart2,
+					duration: window.toFrameCount(7.1)
 				},
 				release: {
-					easeFunction: instant,
+					easeFunction: never,
 					duration: 0
 				}
 			},
@@ -205,10 +205,12 @@ class Vehicle {
 		deltaX = Math.cos(radians);
 		deltaY = Math.sin(radians);
 
-		throttle += accelerator.next();
-
+		
 		if (brake.isPressed) {
 			throttle -= brake.next();
+		}
+		else{
+			throttle += accelerator.next();
 		}
 
 		if (throttle < 0) {
@@ -260,19 +262,29 @@ class Vehicle {
 	}
 
 	public function pressAccelerate() {
+		if(brake.isPressed){
+			releaseBrake();
+		}
+		trace('pressAcc');
 		accelerator.press();
 	}
 
 	public function releaseAccelerate() {
+		trace('releaseAcc');
 		accelerator.release();
 	}
 
 	public function pressBrake() {
+		trace('pressBrake');
 		brake.press();
 	}
 
 	public function releaseBrake() {
+		trace('releaseBrake');
 		brake.release();
+		if(accelerator.isPressed){
+			pressAccelerate();
+		}
 	}
 
 	public function handleCollisions(collisionData:CollisionData) {
