@@ -5,7 +5,6 @@ class Window {
     public var height:Int = 720;
     public var resolution:{w:Int, h:Int} = {w: 1280, h: 720};
     public var title:String = "WINDOW";
-    public var camera:Rl.Camera2D;
 
     public var pause:Bool = false;
 
@@ -21,7 +20,7 @@ class Window {
     public function new(updatesPerSecond:Int=60) {
         this.updatesPerSecond = updatesPerSecond;
         timeStep = 1 / updatesPerSecond;
-        camera = Rl.Camera2D.create(Rl.Vector2.create(0, 0), Rl.Vector2.create(0, 0));
+        
     }
 
     public function run(process:Class<Process>) {
@@ -65,10 +64,8 @@ class Window {
 
         Rl.beginTextureMode(renderTexture);
         Rl.clearBackground(Rl.Colors.BLACK);
-		
-        Rl.beginMode2D(camera);        
+               
         Process.current.draw();
-        Rl.endMode2D();
 
         Rl.endTextureMode();
 

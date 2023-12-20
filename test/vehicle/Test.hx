@@ -12,8 +12,11 @@ class Test extends Process {
 	var collisionData:CollisionData;
 	var background:Texture2D;
 	var backgroundSize:Rectangle;
+	var camera:Camera2D;
+
 
 	override function create() {
+		camera = Rl.Camera2D.create(Rl.Vector2.create(0, 0), Rl.Vector2.create(0, 0));
 		Rl.setExitKey(ESCAPE);
 
 		font = Rl.loadFont("resources/font/ubuntu.ttf");
@@ -111,13 +114,15 @@ class Test extends Process {
 		Center camera on target
 	**/
 	public function updateCameraCenter(targetX:Float, targetY:Float) {
-		window.camera.offset.x = window.resolution.w / 2;
-		window.camera.offset.y = window.resolution.h / 2;
-		window.camera.target.x = targetX;
-		window.camera.target.y = targetY;
+		camera.offset.x = window.resolution.w / 2;
+		camera.offset.y = window.resolution.h / 2;
+		camera.target.x = targetX;
+		camera.target.y = targetY;
 	}
 
 	override function draw() {
+		Rl.beginMode2D(camera);
+		
 		Rl.drawTexture(background, 0, 0, Colors.WHITE);
 
 		car.draw();
@@ -129,6 +134,8 @@ class Test extends Process {
 		var carCoords = '${Std.int(car.gridX)},${Std.int(car.gridY)}';
 		var carThrottle = '${car.throttle}'.substr(0, 3);
 		Rl.drawTextEx(font, '$carCoords $carThrottle', car.center, 16, 0, Colors.LIGHTGRAY);
+
+		Rl.endMode2D();
 	}
 
 	override function unload() {
