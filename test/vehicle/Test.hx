@@ -14,13 +14,12 @@ class Test extends Process {
 	var backgroundSize:Rectangle;
 
 	override function create() {
-		
 		Rl.setExitKey(ESCAPE);
 
 		font = Rl.loadFont("resources/font/ubuntu.ttf");
 		var backgroundImage = Rl.loadImage("resources/png/track_example.png");
 		background = Rl.loadTextureFromImage(backgroundImage);
-		backgroundSize = Rl.Rectangle.create(0,0,background.width, background.height);
+		backgroundSize = Rl.Rectangle.create(0, 0, background.width, background.height);
 
 		var gridSize = 16;
 		var tilesWide = 200;
@@ -42,10 +41,41 @@ class Test extends Process {
 			}
 		}
 
-		var secondsForAcceleratorToReachMaximum = 2.2;
-		var framesForAcceleratorToReachMaximum = window.toFrameCount(secondsForAcceleratorToReachMaximum);
+		car = new Vehicle({
+			forwardSpeed: 7.5,
+			rotateSpeed: 3.5,
+			accelerationCurve: {
+				press: {
+					easeFunction: smoothStart2,
+					duration: window.toFrameCount(10.2)
+				},
+				release: {
+					easeFunction: linear,
+					duration: window.toFrameCount(15.2)
+				}
+			},
+			brakeCurve: {
+				press: {
+					easeFunction: smoothStop3,
+					duration: window.toFrameCount(1.1)
+				},
+				release: {
+					easeFunction: instant,
+					duration: 0
+				}
+			},
+			steeringCurve: {
+				press: {
+					easeFunction: smoothStop3,
+					duration: window.toFrameCount(0.75)
+				},
+				release: {
+					easeFunction: instant,
+					duration: 0
+				}
+			}
+		});
 
-		car = new Vehicle(framesForAcceleratorToReachMaximum);
 		car.setCoords(100, 100, gridSize);
 
 		steeringController = {
@@ -77,7 +107,7 @@ class Test extends Process {
 		updateCameraCenter(car.center.x, car.center.y);
 	}
 
-		/**
+	/**
 		Center camera on target
 	**/
 	public function updateCameraCenter(targetX:Float, targetY:Float) {
@@ -88,14 +118,14 @@ class Test extends Process {
 	}
 
 	override function draw() {
-
-		Rl.drawTexture(background, 0,0, Colors.WHITE);
-		// Rl.imageDraw(background, background, backgroundSize, backgroundSize, Colors.WHITE);
+		Rl.drawTexture(background, 0, 0, Colors.WHITE);
 
 		car.draw();
+
 		for (rect in levelTiles) {
 			Rl.drawRectangle(Std.int(rect.x), Std.int(rect.y), Std.int(rect.width), Std.int(rect.height), Colors.VIOLET);
 		}
+
 		var carCoords = '${Std.int(car.gridX)},${Std.int(car.gridY)}';
 		var carThrottle = '${car.throttle}'.substr(0, 3);
 		Rl.drawTextEx(font, '$carCoords $carThrottle', car.center, 16, 0, Colors.LIGHTGRAY);
@@ -124,23 +154,23 @@ class Vehicle {
 	var center:RlVector2;
 
 	var rotationDirection:Int;
-	var rotationSpeed:Float;
 	var angle:Float;
 	var radians:Float;
 	var sin:Float;
 	var cos:Float;
-	
+
 	var deltaX:Float;
 	var deltaY:Float;
 
 	var throttle:Float;
-	var speed:Float;
-	var isAccelerating:Bool;
-	var isBraking:Bool;
-	var acceleratorEasing:Ease;
-	var throttleOpeningRate:Float;
+	var accelerator:Curve;
+	var brake:Curve;
+	var steering:Curve;
 
-	public function new(framesForAcceleratorToReachMaximum:Float) {
+	public var config:VehicleConfig;
+
+	public function new(config:VehicleConfig) {
+		this.config = config;
 		positionX = 0;
 		positionY = 0;
 		width = 16;
@@ -149,35 +179,29 @@ class Vehicle {
 		rect = Rl.Rectangle.create(positionX, positionY, width, height);
 		origin = Rl.Vector2.create(width / 2, height / 2);
 		center = Rl.Vector2.create(positionX - origin.x, positionY - origin.y);
-		
+
 		angle = 0.0;
-		rotationSpeed = 2.5;  // angle per frame
-		rotationDirection = 0;
+		configure(config);
+	}
 
-		speed = 7.5; // pixels per frame
-		throttle = 0.0;
-		throttleOpeningRate = 0.6;
-		isAccelerating = false;
-		isBraking = false;
-
-		acceleratorEasing = new Ease(framesForAcceleratorToReachMaximum, smoothStart2);
+	public function configure(config:VehicleConfig) {
+		accelerator = new Curve(config.accelerationCurve);
+		brake = new Curve(config.brakeCurve);
+		steering = new Curve(config.steeringCurve);
+		this.config = config;
 	}
 
 	public function update() {
-		angle += rotationSpeed * rotationDirection;
+		angle += (steering.next() * config.rotateSpeed) * rotationDirection;
 		radians = angle * 0.0174444;
 
 		deltaX = Math.cos(radians);
 		deltaY = Math.sin(radians);
 
-		if (isAccelerating) {
-			throttle += throttleOpeningRate * acceleratorEasing.step(1);
-		} else {
-			throttle -= 0.0075;
-		}
+		throttle += accelerator.next();
 
-		if (isBraking) {
-			throttle -= 0.015;
+		if (brake.isPressed) {
+			throttle -= brake.next();
 		}
 
 		if (throttle < 0) {
@@ -188,8 +212,8 @@ class Vehicle {
 			throttle = 1;
 		}
 
-		positionX += deltaX * (speed * throttle);
-		positionY += deltaY * (speed * throttle);
+		positionX += deltaX * (config.forwardSpeed * throttle);
+		positionY += deltaY * (config.forwardSpeed * throttle);
 
 		center.x = positionX - origin.x;
 		center.y = positionY - origin.y;
@@ -221,23 +245,27 @@ class Vehicle {
 
 	public function changeRotationDirection(direction:Int) {
 		rotationDirection = direction;
+		if (rotationDirection == 0) {
+			steering.release();
+		} else {
+			steering.press();
+		}
 	}
 
 	public function pressAccelerate() {
-		isAccelerating = true;
-		acceleratorEasing.resetTime();
+		accelerator.press();
 	}
-	
+
 	public function releaseAccelerate() {
-		isAccelerating = false;
+		accelerator.release();
 	}
 
 	public function pressBrake() {
-		isBraking = true;
+		brake.press();
 	}
 
 	public function releaseBrake() {
-		isBraking = false;
+		brake.release();
 	}
 
 	public function handleCollisions(collisionData:CollisionData) {
@@ -247,33 +275,27 @@ class Vehicle {
 	}
 }
 
-typedef Transformation = (t: Float) -> Float;
+typedef Transformation = (t:Float) -> Float;
+var instant:Transformation = t -> 1;
+var never:Transformation = t -> 0;
+var linear:Transformation = t -> t;
+var smoothStart2:Transformation = t -> t * t;
+var smoothStart3:Transformation = t -> t * t * t;
+var smoothStart5:Transformation = t -> t * t * t * t * t;
+var smoothStop3:Transformation = t -> (t - 1) * (t - 1) * (t - 1) + 1;
 
-var linear: Transformation = t -> t;
-var smoothStart2: Transformation = t -> t * t;
-var smoothStart3: Transformation = t -> t * t * t;
-var smoothStart5: Transformation = t -> t * t * t * t * t;
-var smoothStop3: Transformation = t -> (t - 1) * (t - 1) * (t - 1) + 1;
+class Ease {
+	var minimum:Float = 0;
+	var maximum:Float = 1;
+	var duration:Float;
+	var transformation:Transformation;
+	var time:Float;
 
-
-class Ease
-{
-	var minimum: Float = 0;
-	var maximum: Float = 1;
-	var duration: Float;
-	var transformation: Transformation;
-	var time: Float;
-
-	public function new(duration: Float, transformation: Transformation)
-	{
-		reset(
-			duration,
-			transformation
-		);
+	public function new(duration:Float, transformation:Transformation) {
+		reset(duration, transformation);
 	}
 
-	public function reset(duration: Float, transformation: Transformation)
-	{
+	public function reset(duration:Float, transformation:Transformation) {
 		this.time = 0;
 		this.duration = duration;
 		this.transformation = transformation;
@@ -282,33 +304,86 @@ class Ease
 	/** 
 		advance internal time and return interpolated value
 	**/
-	public function step(delta: Float): Float
-	{
+	public function step(delta:Float):Float {
 		var valueStepped = valueAtTime(time);
 		time += delta;
-		trace(valueStepped);
+		// trace(valueStepped);
 		return valueStepped;
 	}
 
 	/**
 		return interpolated value for the absolute time
 	**/
-	public inline function valueAtTime(absoluteTime: Float)
-	{
+	public inline function valueAtTime(absoluteTime:Float) {
 		return absoluteTime > duration ? maximum : interpolate(absoluteTime);
 	}
 
-	public function resetTime()
-	{
-		time = 0;	
+	public function resetTime() {
+		time = 0;
 	}
 
-	inline function interpolate(time: Float)
-	{
+	inline function interpolate(time:Float) {
 		var t = (minimum * (1 - time) + maximum * time) /= duration;
-		var a: Float = transformation(t);
+		var a:Float = transformation(t);
 		return maximum * a + minimum * (1 - a);
 	}
+}
+
+@:publicFields
+@:structInit
+class CurveConfig {
+	var press:Easing;
+	var release:Easing;
+}
+
+@:publicFields
+@:structInit
+class Easing {
+	var easeFunction:Transformation;
+	var duration:Float;
+}
+
+class Curve {
+	var config:CurveConfig;
+	var easePress:Ease;
+	var easeRelease:Ease;
+
+	public var isPressed:Bool;
+
+	public function new(config:CurveConfig) {
+		this.config = config;
+		this.easePress = new Ease(config.press.duration, config.press.easeFunction);
+		this.easeRelease = new Ease(config.release.duration, config.release.easeFunction);
+		isPressed = false;
+	}
+
+	public function next():Float {
+		if (isPressed) {
+			return easePress.step(1);
+		}
+		return -easeRelease.step(1);
+	}
+
+	public function press() {
+		isPressed = true;
+		easePress.resetTime();
+	}
+
+	public function release() {
+		isPressed = false;
+		easeRelease.resetTime();
+	}
+}
+
+@:structInit
+@:publicFields
+class VehicleConfig {
+	var forwardSpeed:Float;
+	var accelerationCurve:CurveConfig;
+	var brakeCurve:CurveConfig;
+
+	var rotateSpeed:Float;
+	var steeringCurve:CurveConfig;
 }
 
 @:structInit
