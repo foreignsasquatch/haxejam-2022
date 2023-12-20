@@ -5,6 +5,7 @@ import Controller;
 
 class Test extends Process {
 	var car:Vehicle;
+	var steeringController:SteeringController;
 	var controller:KeyboardController;
 	var font:Font;
 	var levelTiles:Array<Rectangle> = [];
@@ -47,12 +48,19 @@ class Test extends Process {
 		car = new Vehicle(framesForAcceleratorToReachMaximum);
 		car.setCoords(100, 100, gridSize);
 
-		controller = new KeyboardController({
-			leftPress: () -> car.changeRotationDirection(-1),
-			leftRelease: () -> car.changeRotationDirection(0),
+		steeringController = {
+			onPressLeft: () -> car.changeRotationDirection(-1),
+			onPressRight: () -> car.changeRotationDirection(1),
+			onReleaseLeft: () -> car.changeRotationDirection(0),
+			onReleaseRight: () -> car.changeRotationDirection(0),
+		}
 
-			rightPress: () -> car.changeRotationDirection(1),
-			rightRelease: () -> car.changeRotationDirection(0),
+		controller = new KeyboardController({
+			leftPress: () -> steeringController.controlLeft(true),
+			leftRelease: () -> steeringController.controlLeft(false),
+
+			rightPress: () -> steeringController.controlRight(true),
+			rightRelease: () -> steeringController.controlRight(false),
 
 			aPress: () -> car.pressAccelerate(),
 			aRelease: () -> car.releaseAccelerate(),
@@ -303,3 +311,40 @@ class Ease
 	}
 }
 
+@:structInit
+class SteeringController {
+	var onPressLeft:() -> Void = () -> return;
+	var onPressRight:() -> Void = () -> return;
+	var onReleaseLeft:() -> Void = () -> return;
+	var onReleaseRight:() -> Void = () -> return;
+	var isPressedLeft:Bool = false;
+	var isPressedRight:Bool = false;
+
+	public function controlLeft(isButtonPressed:Bool) {
+		if (isButtonPressed) {
+			isPressedLeft = true;
+			onPressLeft();
+		} else {
+			isPressedLeft = false;
+			if (isPressedRight) {
+				onPressRight();
+			} else {
+				onReleaseLeft();
+			}
+		}
+	}
+
+	public function controlRight(isButtonPressed:Bool) {
+		if (isButtonPressed) {
+			isPressedRight = true;
+			onPressRight();
+		} else {
+			isPressedRight = false;
+			if (isPressedLeft) {
+				onPressLeft();
+			} else {
+				onReleaseRight();
+			}
+		}
+	}
+}
