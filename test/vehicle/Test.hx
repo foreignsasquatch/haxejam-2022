@@ -5,6 +5,7 @@ import Controller;
 
 class Test extends Process {
 	var car:Vehicle;
+	var currentCarIndex:Int;
 	var controller:KeyboardController;
 	var font:Font;
 	var levelTiles:Array<Rectangle> = [];
@@ -12,7 +13,6 @@ class Test extends Process {
 	var background:Texture2D;
 	var backgroundSize:Rectangle;
 	var camera:Camera2D;
-
 
 	override function create() {
 		camera = Rl.Camera2D.create(Rl.Vector2.create(0, 0), Rl.Vector2.create(0, 0));
@@ -43,43 +43,12 @@ class Test extends Process {
 			}
 		}
 
-		car = new Vehicle({
-			forwardSpeed: 8.5,
-			rotateSpeed: 3.5,
-			accelerationCurve: {
-				press: {
-					easeFunction: t -> smoothStart2(t) + 0.009,
-					duration: window.toFrameCount(22.2)
-				},
-				release: {
-					easeFunction: smoothStart2,
-					duration: window.toFrameCount(11.2)
-				}
-			},
-			brakeCurve: {
-				press: {
-					easeFunction: smoothStart2,
-					duration: window.toFrameCount(7.1)
-				},
-				release: {
-					easeFunction: never,
-					duration: 0
-				}
-			},
-			steeringCurve: {
-				press: {
-					easeFunction: smoothStop3,
-					duration: window.toFrameCount(0.75)
-				},
-				release: {
-					easeFunction: instant,
-					duration: 0
-				}
-			}
-		});
+		currentCarIndex = 0;
+		var config = loadConfig(cars[currentCarIndex]);
+		car = new Vehicle(config);
 
-		car.setCoords(100, 100, gridSize);
-		
+		car.setCoords(67 * gridSize, 65 * gridSize, gridSize);
+
 		var steeringButtons:ButtonPair = {
 			onPressA: () -> car.changeRotationDirection(-1),
 			onReleaseA: () -> car.changeRotationDirection(0),
@@ -87,7 +56,7 @@ class Test extends Process {
 			onPressB: () -> car.changeRotationDirection(1),
 			onReleaseB: () -> car.changeRotationDirection(0),
 		}
-		
+
 		controller = new KeyboardController({
 			leftPress: () -> steeringButtons.controlA(true),
 			leftRelease: () -> steeringButtons.controlA(false),
@@ -100,6 +69,13 @@ class Test extends Process {
 
 			bPress: () -> car.pressBrake(),
 			bRelease: () -> car.releaseBrake(),
+
+			// press tab to cycle through car configurations
+			selectPress: () -> {
+				currentCarIndex = (currentCarIndex + cars.length + 1) % cars.length;
+				var config = loadConfig(cars[currentCarIndex]);
+				car.configure(config);
+			}
 		});
 	}
 
@@ -122,7 +98,7 @@ class Test extends Process {
 
 	override function draw() {
 		Rl.beginMode2D(camera);
-		
+
 		Rl.drawTexture(background, 0, 0, Colors.WHITE);
 
 		car.draw();
@@ -141,6 +117,45 @@ class Test extends Process {
 	override function unload() {
 		Rl.unloadFont(font);
 		Rl.unloadTexture(background);
+	}
+
+	/** converts configurations with durations expressed in seconds to durations expressed in total frame for that same amount of time **/
+	function loadConfig(config:VehicleConfig):VehicleConfig {
+		return {
+			color: config.color,
+			forwardSpeed: config.forwardSpeed,
+			rotateSpeed: config.rotateSpeed,
+			accelerationCurve: {
+				press: {
+					easeFunction: config.accelerationCurve.press.easeFunction,
+					duration: window.toFrameCount(config.accelerationCurve.press.duration)
+				},
+				release: {
+					easeFunction: config.accelerationCurve.release.easeFunction,
+					duration: window.toFrameCount(config.accelerationCurve.release.duration)
+				}
+			},
+			brakeCurve: {
+				press: {
+					easeFunction: config.brakeCurve.press.easeFunction,
+					duration: window.toFrameCount(config.brakeCurve.press.duration)
+				},
+				release: {
+					easeFunction: config.brakeCurve.release.easeFunction,
+					duration: window.toFrameCount(config.brakeCurve.release.duration)
+				}
+			},
+			steeringCurve: {
+				press: {
+					easeFunction: config.steeringCurve.press.easeFunction,
+					duration: window.toFrameCount(config.steeringCurve.press.duration)
+				},
+				release: {
+					easeFunction: config.steeringCurve.release.easeFunction,
+					duration: window.toFrameCount(config.steeringCurve.release.duration)
+				}
+			}
+		}
 	}
 }
 
@@ -176,6 +191,8 @@ class Vehicle {
 
 	public var config:VehicleConfig;
 
+	var color:Color;
+
 	public function new(config:VehicleConfig) {
 		this.config = config;
 		positionX = 0;
@@ -192,6 +209,7 @@ class Vehicle {
 	}
 
 	public function configure(config:VehicleConfig) {
+		color = rgbaToColor(config.color);
 		accelerator = new Curve(config.accelerationCurve);
 		brake = new Curve(config.brakeCurve);
 		steering = new Curve(config.steeringCurve);
@@ -205,11 +223,9 @@ class Vehicle {
 		deltaX = Math.cos(radians);
 		deltaY = Math.sin(radians);
 
-		
 		if (brake.isPressed) {
 			throttle -= brake.next();
-		}
-		else{
+		} else {
 			throttle += accelerator.next();
 		}
 
@@ -237,7 +253,7 @@ class Vehicle {
 		origin.x = width / 2;
 		origin.y = height / 2;
 
-		Rl.drawRectanglePro(rect, origin, angle, Colors.DARKBLUE);
+		Rl.drawRectanglePro(rect, origin, angle, color);
 	}
 
 	public function setCoords(x:Float, y:Float, gridSize:Float) {
@@ -262,7 +278,7 @@ class Vehicle {
 	}
 
 	public function pressAccelerate() {
-		if(brake.isPressed){
+		if (brake.isPressed) {
 			releaseBrake();
 		}
 		trace('pressAcc');
@@ -282,7 +298,7 @@ class Vehicle {
 	public function releaseBrake() {
 		trace('releaseBrake');
 		brake.release();
-		if(accelerator.isPressed){
+		if (accelerator.isPressed) {
 			pressAccelerate();
 		}
 	}
@@ -397,6 +413,7 @@ class Curve {
 @:structInit
 @:publicFields
 class VehicleConfig {
+	var color:Int;
 	var forwardSpeed:Float;
 	var accelerationCurve:CurveConfig;
 	var brakeCurve:CurveConfig;
@@ -414,7 +431,7 @@ class ButtonPair {
 	var onPressB:() -> Void = () -> return;
 	var onReleaseB:() -> Void = () -> return;
 	var isPressedB:Bool = false;
-	
+
 	public function controlA(isButtonPressed:Bool) {
 		if (isButtonPressed) {
 			isPressedA = true;
@@ -442,4 +459,122 @@ class ButtonPair {
 			}
 		}
 	}
+}
+
+
+// forward speed is pixels per frame
+// rotate speed is angles per frame
+// durations are measured in seconds
+// speeds are eased towards the full amount and will only change by the defined amount when the duration has expired
+// the easing function can be changed
+var cars:Array<VehicleConfig> = [
+	{
+		color: 0x0052acff,
+		forwardSpeed: 8.5,
+		rotateSpeed: 3.5,
+		accelerationCurve: {
+			press: {
+				easeFunction: t -> smoothStart2(t) + 0.009, // 0.009 is used to raise the minimum above 0 (and start movement immediately) todo: make this offset a parameter
+				duration: 22.2, // take 22.2 seconds to reach the speed of 8.5 pixels per frame
+			},
+			release: {
+				easeFunction: smoothStart2,
+				duration: 11.2,
+			}
+		},
+		brakeCurve: {
+			press: {
+				easeFunction: smoothStart2,
+				duration: 7.1
+			},
+			release: {
+				easeFunction: never,
+				duration: 0
+			}
+		},
+		steeringCurve: {
+			press: {
+				easeFunction: smoothStop3,
+				duration: 0.75
+			},
+			release: {
+				easeFunction: instant,
+				duration: 0
+			}
+		}
+	},
+	{
+		color: 0xaa33acff,
+		forwardSpeed: 15.5,
+		rotateSpeed: 4.5,
+		accelerationCurve: {
+			press: {
+				easeFunction: t -> smoothStart2(t) + 0.019,
+				duration: 12.2,
+			},
+			release: {
+				easeFunction: smoothStart2,
+				duration: 19.2,
+			}
+		},
+		brakeCurve: {
+			press: {
+				easeFunction: smoothStart2,
+				duration: 7.1
+			},
+			release: {
+				easeFunction: never,
+				duration: 0
+			}
+		},
+		steeringCurve: {
+			press: {
+				easeFunction: smoothStop3,
+				duration: 3.3
+			},
+			release: {
+				easeFunction: instant,
+				duration: 0
+			}
+		}
+	},
+	{
+		color: 0xa8a839ff,
+		forwardSpeed: 5.5,
+		rotateSpeed: 9.5,
+		accelerationCurve: {
+			press: {
+				easeFunction: t -> smoothStart2(t) + 0.009,
+				duration: 40.2,
+			},
+			release: {
+				easeFunction: smoothStart2,
+				duration: 10.2,
+			}
+		},
+		brakeCurve: {
+			press: {
+				easeFunction: smoothStart2,
+				duration: 2.1
+			},
+			release: {
+				easeFunction: never,
+				duration: 0
+			}
+		},
+		steeringCurve: {
+			press: {
+				easeFunction: smoothStop3,
+				duration: 25.75
+			},
+			release: {
+				easeFunction: instant,
+				duration: 0
+			}
+		}
+	}
+];
+
+function rgbaToColor(rgba:Int):Color {
+	return Rl.Color.create((rgba >> 24) & 255, (rgba >> 16) & 255, (rgba >> 8) & 255, (rgba) & 255);
 }
