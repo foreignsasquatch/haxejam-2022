@@ -123,6 +123,7 @@ class Test extends Process {
 	function loadConfig(config:VehicleConfig):VehicleConfig {
 		return {
 			color: config.color,
+			forwardThrottleMin: config.forwardThrottleMin,
 			forwardSpeed: window.toFrameDistance(config.forwardSpeed),
 			rotateSpeed: window.toFrameDistance(config.rotateSpeed),
 			accelerationCurve: {
@@ -227,6 +228,9 @@ class Vehicle {
 			throttle -= brake.next();
 		} else {
 			throttle += accelerator.next();
+			if(accelerator.isPressed){
+				throttle += config.forwardThrottleMin;
+			}
 		}
 
 		if (throttle < 0) {
@@ -303,6 +307,7 @@ class Vehicle {
 		}
 	}
 
+	// todo - finish collision handling (need a test level first?)
 	public function handleCollisions(collisionData:CollisionData) {
 		if (throttle > 0 && collisionData.exists(gridX, gridY)) {
 			throttle = 0;
@@ -414,6 +419,7 @@ class Curve {
 @:publicFields
 class VehicleConfig {
 	var color:Int;
+	var forwardThrottleMin:Float;
 	var forwardSpeed:Float;
 	var accelerationCurve:CurveConfig;
 	var brakeCurve:CurveConfig;
@@ -470,12 +476,13 @@ class ButtonPair {
 var cars:Array<VehicleConfig> = [
 	{
 		color: 0x0052acff,
+		forwardThrottleMin: 0.009, // start the ease above 0 so the minimum speed is above 0
 		forwardSpeed: 510,
 		rotateSpeed: 210,
 		accelerationCurve: {
 			press: {
-				easeFunction: t -> smoothStart2(t) + 0.009, // 0.009 is used to raise the minimum above 0 (and start movement immediately) todo: make this offset a parameter
-				duration: 22.2, // take 22.2 seconds to reach the speed of 8.5 pixels per frame
+				easeFunction: smoothStart2,
+				duration: 22.2, // take 22.2 seconds to reach the speed of 510 pixels per second
 			},
 			release: {
 				easeFunction: smoothStart2,
@@ -505,11 +512,12 @@ var cars:Array<VehicleConfig> = [
 	},
 	{
 		color: 0xaa33acff,
+		forwardThrottleMin: 0.02,
 		forwardSpeed: 930,
 		rotateSpeed: 270,
 		accelerationCurve: {
 			press: {
-				easeFunction: t -> smoothStart2(t) + 0.019,
+				easeFunction: smoothStart2,
 				duration: 12.2,
 			},
 			release: {
@@ -540,11 +548,12 @@ var cars:Array<VehicleConfig> = [
 	},
 	{
 		color: 0xa8a839ff,
+		forwardThrottleMin: 0.005,
 		forwardSpeed: 330,
 		rotateSpeed: 570,
 		accelerationCurve: {
 			press: {
-				easeFunction: t -> smoothStart2(t) + 0.009,
+				easeFunction: smoothStart2,
 				duration: 40.2,
 			},
 			release: {
