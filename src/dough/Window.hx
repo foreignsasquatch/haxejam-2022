@@ -80,4 +80,8 @@ class Window {
     public function toFrameCount(seconds:Float):Float{
         return seconds / timeStep;
     }
+
+    public function toFrameDistance(distance:Float) {
+        return distance * timeStep;
+    }
 }

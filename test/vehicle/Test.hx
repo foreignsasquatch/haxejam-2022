@@ -123,8 +123,8 @@ class Test extends Process {
 	function loadConfig(config:VehicleConfig):VehicleConfig {
 		return {
 			color: config.color,
-			forwardSpeed: config.forwardSpeed,
-			rotateSpeed: config.rotateSpeed,
+			forwardSpeed: window.toFrameDistance(config.forwardSpeed),
+			rotateSpeed: window.toFrameDistance(config.rotateSpeed),
 			accelerationCurve: {
 				press: {
 					easeFunction: config.accelerationCurve.press.easeFunction,
@@ -462,16 +462,16 @@ class ButtonPair {
 }
 
 
-// forward speed is pixels per frame
-// rotate speed is angles per frame
+// forward speed is pixels per second
+// rotate speed is degrees per second
 // durations are measured in seconds
 // speeds are eased towards the full amount and will only change by the defined amount when the duration has expired
 // the easing function can be changed
 var cars:Array<VehicleConfig> = [
 	{
 		color: 0x0052acff,
-		forwardSpeed: 8.5,
-		rotateSpeed: 3.5,
+		forwardSpeed: 510,
+		rotateSpeed: 210,
 		accelerationCurve: {
 			press: {
 				easeFunction: t -> smoothStart2(t) + 0.009, // 0.009 is used to raise the minimum above 0 (and start movement immediately) todo: make this offset a parameter
@@ -505,8 +505,8 @@ var cars:Array<VehicleConfig> = [
 	},
 	{
 		color: 0xaa33acff,
-		forwardSpeed: 15.5,
-		rotateSpeed: 4.5,
+		forwardSpeed: 930,
+		rotateSpeed: 270,
 		accelerationCurve: {
 			press: {
 				easeFunction: t -> smoothStart2(t) + 0.019,
@@ -540,8 +540,8 @@ var cars:Array<VehicleConfig> = [
 	},
 	{
 		color: 0xa8a839ff,
-		forwardSpeed: 5.5,
-		rotateSpeed: 9.5,
+		forwardSpeed: 330,
+		rotateSpeed: 570,
 		accelerationCurve: {
 			press: {
 				easeFunction: t -> smoothStart2(t) + 0.009,
@@ -577,4 +577,9 @@ var cars:Array<VehicleConfig> = [
 
 function rgbaToColor(rgba:Int):Color {
 	return Rl.Color.create((rgba >> 24) & 255, (rgba >> 16) & 255, (rgba >> 8) & 255, (rgba) & 255);
+}
+
+class FrameUnits
+{
+	var distance:Float = 1;
 }
